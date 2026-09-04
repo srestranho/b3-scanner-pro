@@ -14,7 +14,7 @@ MESES_PUT = {1:'M',2:'N',3:'O',4:'P',5:'Q',6:'R',7:'S',8:'T',9:'U',10:'V',11:'W'
 st.set_page_config(page_title="Terminal Tubarão R$2000", layout="wide")
 st.title(f"🦈 TERMINAL TUBARÃO - Banca R$ {BANCA:.0f}")
 
-TOP25 = ["PETR4.SA", "VALE3.SA", "ITUB4.SA", "BBDC4.SA", "BBAS3.",B3SA3.SA", "ABEV3.SA", "BPAC11.SA", "PRIO3.SA", "ITSA4.SA","WEGE3.SA", "MGLU3.SA", "JBSS3.SA", "LREN3.SA", "GGBR4.SA","USIM5.SA", "RENT3.SA", "RAIL3.SA", "ELET3.SA", "SBSP3.SA","BBSE3.SA", "CYRE3.SA", "HAPV3.SA", "RADL3.SA", "SUZB3.SA"]
+TOP25 = ["PETR4.SA", "VALE3.SA", "ITUB4.SA", "BBDC4.SA", "BBAS3.","B3SA3.SA", "ABEV3.SA", "BPAC11.SA", "PRIO3.SA", "ITSA4.SA","WEGE3.SA", "MGLU3.SA", "JBSS3.SA", "LREN3.SA", "GGBR4.SA","USIM5.SA", "RENT3.SA", "RAIL3.SA", "ELET3.SA", "SBSP3.SA","BBSE3.SA", "CYRE3.SA", "HAPV3.SA", "RADL3.SA", "SUZB3.SA"]
 
 def get_venc():
     hoje = datetime.now()
