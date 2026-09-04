@@ -75,7 +75,7 @@ def fazer_scan_e_mandar(motivo="MANUAL"):
         strike_put = round(preco*0.97,2)
         cod_call = f"{base}J{int(strike_call)}" if strike_call<100 else f"{base}J{int(strike_call*10)/10}"
         cod_put = f"{base}V{int(strike_put)}" if strike_put<100 else f"{base}V{int(strike_put*10)/10}"
-        
+
         if score >= 3:
             qtd = int((BANCA*RISCO)//50) # ex R$0,50 = 4 cont
             lista.append({"Ativo":base, "Preço":f"R${preco:.2f}", "Sinal":"🟢 CALL", "Score":score, "Tubarão":f"🐋 {a['vol_mult']:.1f}x" if a['tubarao'] else "-", "OPÇÃO":cod_call, "Strike":f"R${strike_call}", "Lote R$200":f"{qtd} cont", "RSI":f"{a['rsi']:.0f}", "Tipo":"CALL"})
@@ -99,4 +99,35 @@ def fazer_scan_e_mandar(motivo="MANUAL"):
 
     st.code(msg)
     try:
-        url = "https://api.callmebot.com/whatsapp.php?phone={MEU_NUMERO}&text={quote(msg)}&apikey={MINHA_APIKEY}"
+        url = f"https://api.callmebot.com/whatsapp.php?phone={MEU_NUMERO}&text={quote(msg)}&apikey={MINHA_APIKEY}"
+        r = requests.get(url, timeout=15)
+        if "queued" in r.text.lower() or "sent" in r.text.lower():
+            st.success(f"✅ WhatsApp enviado {hora_str} BRT! {r.text}")
+            st.session_state["ultimo_disparo"] = f"{data_str} {hora_str}"
+            return True
+        else:
+            st.error(f"Erro CallMeBot: {r.text}")
+    except Exception as e:
+        st.error(f"Erro envio: {e}")
+    return False
+
+# ========= BOTÃO MANUAL =========
+if st.button("🚀 SCAN MANUAL AGORA", type="primary"):
+    fazer_scan_e_mandar("MANUAL")
+
+st.divider()
+
+# ========= LÓGICA AUTOMÁTICA 9:30 e 15h =========
+if hora_str in HORARIOS_ALERTA and agora_br.weekday() < 5: # seg a sex
+    chave_hoje = f"{data_str} {hora_str}"
+    if "ultimo_disparo" not in st.session_state or st.session_state.ultimo_disparo!= chave_hoje:
+        st.toast(f"Disparo automático {hora_str} BRT!", icon="🦈")
+        fazer_scan_e_mandar(f"AUTO {hora_str}")
+    else:
+        st.info(f"✅ Alerta {hora_str} de hoje já enviado às {st.session_state.ultimo_disparo}")
+else:
+    proximo = [h for h in HORARIOS_ALERTA if h > hora_str]
+    if proximo:
+        st.info(f"⏳ Próximo alerta automático hoje às {proximo[0]} BRT. App se atualiza a cada 1 min.")
+    else:
+        st.info(f"⏳ Alertas de hoje encerrados. Próximo amanhã às {HORARIOS_ALERTA[0]} BRT.")
