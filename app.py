@@ -3,30 +3,26 @@ from datetime import datetime
 from urllib.parse import quote
 from streamlit_autorefresh import st_autorefresh
 
-# ====== SEUS DADOS - NÃO MUDA ======
-MEU_NUMERO = "+5504298195735"
+# ====== CONFIG ======
+MEU_NUMERO = "5542998195735"
 MINHA_APIKEY = "4955675"
 BANCA = 2000.0
-RISCO_REAIS = BANCA * 0.10  # R$200
+RISCO_REAIS = BANCA * 0.10
 FUSO_BR = pytz.timezone("America/Sao_Paulo")
-HORARIOS_AUTO = ["09:30", "15:00"]  # <<< seus horários
+HORARIOS_AUTO = ["09:30", "15:00"]
 
-# ====== CONFIG PÁGINA ======
-st.set_page_config(page_title="B3 Tubarão V11 Auto+Manual", layout="wide")
-st.title("🦈 TERMINAL B3 V11 - AUTO 09:30/15h + MANUAL")
+st.set_page_config(page_title="B3 V12 Corrigido", layout="wide")
+st.title("🦈 TERMINAL B3 V12 - Tabela Completa + Auto")
 
-# ====== RELÓGIO - ATUALIZA A CADA 60 SEGUNDOS ======
-st_autorefresh(interval=60*1000, key="relogio_v11")
+# ====== RELÓGIO ======
+st_autorefresh(interval=60*1000, key="relogio_v12")
 agora = datetime.now(FUSO_BR)
 hora_atual = agora.strftime("%H:%M")
 data_atual = agora.strftime("%d/%m/%Y")
-dia_semana = agora.weekday()  # 0=segunda, 6=domingo
 
-# Sidebar
-st.sidebar.metric("⏰ Brasília Agora", hora_atual)
+st.sidebar.metric("⏰ Brasília", hora_atual)
 st.sidebar.write(f"📅 {data_atual}")
-st.sidebar.info(f"🔔 Autos: {', '.join(HORARIOS_AUTO)} BRT")
-st.sidebar.write("Deixe essa aba aberta das 9h às 15h30")
+st.sidebar.success(f"Autos: {', '.join(HORARIOS_AUTO)} BRT")
 
 TOP25 = ["PETR4.SA","VALE3.SA","ITUB4.SA","BBDC4.SA","BBAS3.SA","B3SA3.SA","ABEV3.SA","BPAC11.SA","PRIO3.SA","ITSA4.SA","WEGE3.SA","MGLU3.SA","JBSS3.SA","LREN3.SA","GGBR4.SA","USIM5.SA","RENT3.SA","RAIL3.SA","ELET3.SA","SBSP3.SA","BBSE3.SA","CYRE3.SA","HAPV3.SA","RADL3.SA","SUZB3.SA"]
 
@@ -53,94 +49,121 @@ def analisa(ticker):
         if u['MACD']>u['MACD_S']: score+=1
         if u['Close']>u['MM21']: score+=1
         if tubarao and score>0: score+=2
-        return {"ativo":ticker.replace(".SA",""), "preco":float(u['Close']), "rsi":float(u['RSI']), "score":score, "tubarao":tubarao, "vol_mult":float(vol_mult)}
+        return {"ativo":ticker.replace(".SA",""), "preco":float(u['Close']), "rsi":float(u['RSI']), "score":score, "tubarao":tubarao, "vol_mult":float(vol_mult), "close_todos": close}
     except: return None
 
-# FUNÇÃO ÚNICA QUE FAZ TUDO - MANUAL E AUTO USAM A MESMA
+# FUNÇÃO CORRIGIDA - SEMPRE MOSTRA TABELA COMPLETA
 def executa_scan(motivo):
-    st.subheader(f"📊 Scan {motivo} - {hora_atual} BRT")
+    st.divider()
+    st.subheader(f"📊 Resultado {motivo} - {hora_atual} BRT")
+
     lista=[]
-    barra = st.progress(0, text="Varrendo B3...")
+    barra = st.progress(0, text="Analisando 25 ativos...")
+    # Para tabela completa vamos guardar todos
+    tabela_completa = []
+
     for i,t in enumerate(TOP25):
         a = analisa(t)
         if a:
+            tabela_completa.append({
+                "Ativo": a['ativo'],
+                "Preço": f"R$ {a['preco']:.2f}",
+                "RSI": f"{a['rsi']:.0f}",
+                "Score": a['score'],
+                "Volume": f"{a['vol_mult']:.1f}x",
+                "Tubarão": "🐋 SIM" if a['tubarao'] else "-",
+                "Sinal": "🟢 CALL" if a['score']>=3 else "🔴 PUT" if a['score']<=-2 else "⚪ NEUTRO"
+            })
             preco=a['preco']; score=a['score']; base=a['ativo']
             strike_c = round(preco*1.03,2)
             strike_p = round(preco*0.97,2)
-            # Código legível
             cod_c = f"{base}J{int(strike_c)}"
             cod_p = f"{base}V{int(strike_p)}"
-            qtd = int(RISCO_REAIS // 50) # se opção R$0,50 = 4 contratos
+            qtd = int(RISCO_REAIS // 50)
             if score >= 3:
-                lista.append({"Ativo":base, "Preço":f"R${preco:.2f}", "Sinal":"🟢 CALL", "Score":score, "Tubarão":f"🐋 {a['vol_mult']:.1f}x" if a['tubarao'] else "-", "OPÇÃO":cod_c, "Strike":f"R${strike_c}", "Lote R$200":f"{qtd} cont", "RSI":f"{a['rsi']:.0f}", "Tipo":"CALL"})
+                lista.append({"Ativo":base, "Preço":f"R${preco:.2f}", "Sinal":"🟢 CALL", "Score":score, "Tubarão":f"🐋 {a['vol_mult']:.1f}x" if a['tubarao'] else "-", "OPÇÃO":cod_c, "Strike":f"R${strike_c}", "Lote R$200":f"{qtd} cont", "RSI":f"{a['rsi']:.0f}"})
             elif score <= -2:
-                lista.append({"Ativo":base, "Preço":f"R${preco:.2f}", "Sinal":"🔴 PUT", "Score":score, "Tubarão":f"🐋 {a['vol_mult']:.1f}x" if a['tubarao'] else "-", "OPÇÃO":cod_p, "Strike":f"R${strike_p}", "Lote R$200":f"{qtd} cont", "RSI":f"{a['rsi']:.0f}", "Tipo":"PUT"})
+                lista.append({"Ativo":base, "Preço":f"R${preco:.2f}", "Sinal":"🔴 PUT", "Score":score, "Tubarão":f"🐋 {a['vol_mult']:.1f}x" if a['tubarao'] else "-", "OPÇÃO":cod_p, "Strike":f"R${strike_p}", "Lote R$200":f"{qtd} cont", "RSI":f"{a['rsi']:.0f}"})
         barra.progress((i+1)/len(TOP25))
     barra.empty()
 
-    if not lista:
-        df = pd.DataFrame()
-        msg = f"⚪ *B3 {motivo} {hora_atual} BRT {data_atual}* - Sem sinal. Preservar R${BANCA:.0f}."
-        st.warning("Sem sinal hoje. Preservar capital é o trade.")
-    else:
-        df = pd.DataFrame(lista).sort_values("Score", ascending=False)
-        st.dataframe(df, use_container_width=True, hide_index=True)
-        tubaroes = df[df['Tubarão'].str.contains("🐋")]
-        if not tubaroes.empty:
-            st.success(f"🦈 {len(tubaroes)} tubarões detectados!")
-        msg = f"🦈 *B3 {motivo} {hora_atual} BRT {data_atual}*\nBanca R${BANCA:.0f} Risco R${RISCO_REAIS:.0f}\n\n"
-        for _, r in df.iterrows():
-            msg += f"{r['Sinal']} {r['Ativo']} {r['OPÇÃO']} {r['Tubarão']} Score {r['Score']}\n"
-        msg += "\nAlvo +100% parcial. Stop -50%."
+    # 1. SEMPRE MOSTRA TABELA COMPLETA DOS 25
+    st.write("### 📋 Tabela Completa TOP25 (como antes)")
+    df_completo = pd.DataFrame(tabela_completa).sort_values("Score", ascending=False)
+    st.dataframe(df_completo, use_container_width=True, hide_index=True, height=500)
 
-    st.code(msg)
-    # ENVIA WHATSAPP
+    # 2. DESTAQUE SÓ DOS SINAIS
+    if not lista:
+        msg = f"B3 {motivo} {hora_atual} BRT {data_atual} - Sem sinal forte. Preservar R${BANCA:.0f}."
+        st.warning("⚪ Sem sinal de CALL/PUT hoje. Preservar banca.")
+        st.code(msg)
+    else:
+        df_sinais = pd.DataFrame(lista).sort_values("Score", ascending=False)
+        st.write("### 🎯 Só Oportunidades CALL/PUT")
+        st.dataframe(df_sinais, use_container_width=True, hide_index=True)
+
+        msg = f"🦈 B3 {motivo} {hora_atual} BRT {data_atual} - {len(df_sinais)} sinais\nBanca R${BANCA:.0f} Risco R${RISCO_REAIS:.0f}\n\n"
+        for _, r in df_sinais.iterrows():
+            msg += f"{r['Sinal']} {r['Ativo']} {r['OPÇÃO']} {r['Tubarão']} Score {r['Score']}\n"
+        st.code(msg)
+
+    # ENVIA
+    return envia_whatsapp(msg, motivo)
+
+def envia_whatsapp(msg, motivo):
+    # CORREÇÃO DO TESTE: CallMeBot precisa URL encode e sem emoji no teste
     try:
-        url = f"https://api.callmebot.com/whatsapp.php?phone={MEU_NUMERO}&text={quote(msg)}&apikey={MINHA_APIKEY}"
-        resp = requests.get(url, timeout=15)
-        if "queued" in resp.text.lower() or "sent" in resp.text.lower():
-            st.success(f"✅ WhatsApp {motivo} enviado! {hora_atual}")
-            st.toast(f"WhatsApp {motivo} enviado!", icon="✅")
+        # Limpa mensagem pra API não bloquear
+        msg_limpa = msg.replace("🦈","").replace("🐋","").replace("🟢","CALL").replace("🔴","PUT").replace("⚪","")
+        url = f"https://api.callmebot.com/whatsapp.php?phone={MEU_NUMERO}&text={quote(msg_limpa)}&apikey={MINHA_APIKEY}"
+        st.write(f"🔗 Enviando para API...") # debug
+        resp = requests.get(url, timeout=20)
+        st.write(f"Resposta API: {resp.text}") # debug pra você ver
+        if resp.status_code==200 and ("queued" in resp.text.lower() or "sent" in resp.text.lower() or "message" in resp.text.lower()):
+            st.success(f"✅ WhatsApp {motivo} enviado {hora_atual} BRT!")
+            st.balloons()
             return True
         else:
-            st.error(f"Erro CallMeBot: {resp.text}")
+            st.error(f"❌ Falha API: {resp.text} | Status {resp.status_code}")
+            st.warning("⚠️ Vá no WhatsApp e mande 'I allow callmebot to send me messages' pro +34 644 51 95 23 e ative de novo o link: https://api.callmebot.com/whatsapp.php?phone=5542998195735&text=teste&apikey=4955675")
+            return False
     except Exception as e:
-        st.error(f"Erro envio: {e}")
-    return False
+        st.error(f"Erro conexão: {e}")
+        return False
 
-# ====== ÁREA MANUAL - SEMPRE FUNCIONA ======
-col1, col2 = st.columns(2)
-with col1:
-    if st.button("🚀 GERAR DADOS MANUAL AGORA", type="primary", use_container_width=True):
+# ====== BOTÕES ======
+c1,c2,c3 = st.columns([2,1,1])
+with c1:
+    if st.button("🚀 GERAR TABELA COMPLETA AGORA", type="primary", use_container_width=True):
         executa_scan("MANUAL")
 
-with col2:
-    if st.button("🧪 TESTAR WHATSAPP", use_container_width=True):
-        requests.get(f"https://api.callmebot.com/whatsapp.php?phone={MEU_NUMERO}&text={quote(f'Teste B3 V11 {hora_atual} BRT OK')}&apikey={MINHA_APIKEY}")
-        st.success("Teste enviado!")
+with c2:
+    if st.button("🧪 TESTAR WHATSAPP CORRIGIDO", use_container_width=True):
+        # TESTE SIMPLES SEM ACENTO NEM EMOJI
+        msg_teste = f"TESTE B3 V12 {hora_atual} BRT {data_atual} - Banca R${BANCA:.0f} OK"
+        envia_whatsapp(msg_teste, "TESTE")
+
+with c3:
+    if st.button("🔄 Limpar histórico auto", use_container_width=True):
+        st.session_state["ultimo_auto"] = ""
+        st.success("Histórico limpo!")
 
 st.divider()
 
-# ====== ÁREA AUTOMÁTICA - NÃO PRECISA CLICAR ======
-# Só dispara se for dia de semana e hora bater
-if dia_semana < 5: # 0-4 = seg a sex
+# ====== AUTO 9:30 e 15h ======
+if agora.weekday() < 5:
     if hora_atual in HORARIOS_AUTO:
         chave = f"{data_atual} {hora_atual}"
-        ultimo = st.session_state.get("ultimo_auto", "")
-        if ultimo != chave:
-            st.warning(f"⏰ HORÁRIO AUTO DETECTADO {hora_atual} BRT - Disparando...")
+        if st.session_state.get("ultimo_auto","")!= chave:
+            st.warning(f"⏰ AUTO {hora_atual} BRT detectado! Disparando...")
             ok = executa_scan(f"AUTO {hora_atual}")
             if ok:
                 st.session_state["ultimo_auto"] = chave
-                st.balloons()
         else:
-            st.info(f"✅ Auto {hora_atual} de hoje já enviado em {ultimo}")
+            st.info(f"✅ Auto {hora_atual} já enviado hoje.")
     else:
-        # Mostra contagem regressiva
-        proximos = [h for h in HORARIOS_AUTO if h > hora_atual]
-        if proximos:
-            st.info(f"⏳ Próximo auto hoje às {proximos[0]} BRT. App atualiza sozinho a cada 1 min. Pode clicar no MANUAL quando quiser.")
-        else:
-            st.info(f"✅ Autos de hoje encerrados. Amanhã às {HORARIOS_AUTO[0]} BRT.")
+        prox = [h for h in HORARIOS_AUTO if h > hora_atual]
+        if prox:
+            st.info(f"⏳ Próximo auto {prox[0]} BRT. Manual funciona sempre.")
 else:
-    st.info("📴 Fim de semana - sem alertas auto.")
+    st.info("Fim de semana sem auto.")
