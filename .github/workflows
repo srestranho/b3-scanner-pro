@@ -1,1 +1,26 @@
-alerta.yml
+import yfinance as yf, pandas as pd, ta, requests
+from datetime import datetime
+from urllib.parse import quote
+import pytz
+
+MEU_NUMERO="5542998195735"
+MINHA_APIKEY="4955675"
+TOP25 = ["PETR4.SA","VALE3.SA","ITUB4.SA","BBDC4.SA","BBAS3.SA","B3SA3.SA","ABEV3.SA","BPAC11.SA","PRIO3.SA","ITSA4.SA","WEGE3.SA","MGLU3.SA","JBSS3.SA","LREN3.SA","GGBR4.SA","USIM5.SA","RENT3.SA","RAIL3.SA","ELET3.SA","SBSP3.SA","BBSE3.SA","CYRE3.SA","HAPV3.SA","RADL3.SA","SUZB3.SA"]
+
+def analisa(ticker):
+    # seu mesmo código de analisa()
+    ...
+
+lista = []
+for t in TOP25:
+    a=analisa(t)
+    if a and a['score']>=3: lista.append(a)
+
+hora = datetime.now(pytz.timezone("America/Sao_Paulo")).strftime("%H:%M")
+if lista:
+    msg = f"🦈 ALERTA AUTO {hora} BRT - {len(lista)} sinais\n"
+    for x in lista: msg += f"{x['ativo']} Score {x['score']} Vol {x['vol_mult']:.1f}x\n"
+else:
+    msg = f"⚪ AUTO {hora} BRT - Sem sinal. Preservar R$2000."
+
+requests.get(f"https://api.callmebot.com/whatsapp.php?phone={MEU_NUMERO}&text={quote(msg)}&apikey={MINHA_APIKEY}")
