@@ -4,7 +4,7 @@ from urllib.parse import quote
 from streamlit_autorefresh import st_autorefresh
 
 # ====== SEUS DADOS - NÃO MUDA ======
-MEU_NUMERO = "5542998195735"
+MEU_NUMERO = "554298195735"
 MINHA_APIKEY = "4955675"
 BANCA = 2000.0
 RISCO_REAIS = BANCA * 0.10  # R$200
