@@ -99,5 +99,5 @@ def fazer_scan_e_mandar(motivo="MANUAL"):
 
     st.code(msg)
     try:
-        url = f"https://api.callmebot.com/whatsapp.php?phone={MEU_NUMERO}&text={quote(msg)}&apikey={MINHA_APIKEY}"
+        url = "https://api.callmebot.com/whatsapp.php?phone={MEU_NUMERO}&text={quote(msg)}&apikey={MINHA_APIKEY}"
         
