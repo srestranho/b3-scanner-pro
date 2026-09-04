@@ -38,7 +38,7 @@ def analisa(ticker):
         # Detector Tubarão
         vol_hoje = df['Volume'].iloc[-1]
         vol_media = df['Volume'].rolling(20).mean().iloc[-1]
-        tubarao = vol_hoje > (vol_media * 2)
+        tubarao = vol_hoje > (vol_media * 1.3)
         vol_mult = vol_hoje / vol_media if vol_media>0 else 1
 
         u, p = df.iloc[-1], df.iloc[-2]
