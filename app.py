@@ -49,7 +49,7 @@ if st.button("🚀 GERAR CÓDIGOS DE OPÇÃO", type="primary"):
     st.info(f"Vencimentos ativos: {v1[0]}º mês (CALL={v1[1]}/PUT={v1[2]}) e {v2[0]}º mês (CALL={v2[1]}/PUT={v2[2]}) - Foco em liquidez")
 
     lista=[]
-    for ticker in TOP10:
+    for ticker in TOP25:
         a=analisa(ticker)
         if not a: continue
         preco = a['preco']; score = a['score']; base = a['ativo']
