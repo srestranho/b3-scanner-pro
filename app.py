@@ -3,35 +3,30 @@ from datetime import datetime
 from urllib.parse import quote
 from streamlit_autorefresh import st_autorefresh
 
-# ========= CONFIG =========
+# ====== SEUS DADOS - NÃO MUDA ======
 MEU_NUMERO = "5542998195735"
 MINHA_APIKEY = "4955675"
 BANCA = 2000.0
-RISCO = 0.10 # R$200
+RISCO_REAIS = BANCA * 0.10  # R$200
 FUSO_BR = pytz.timezone("America/Sao_Paulo")
+HORARIOS_AUTO = ["09:30", "15:00"]  # <<< seus horários
 
-st.set_page_config(page_title="Tubarão B3 Auto 9:30 15h", layout="wide")
-st.title("🦈 TERMINAL B3 V10 - AUTO 09:30 / 15:00 BRT")
+# ====== CONFIG PÁGINA ======
+st.set_page_config(page_title="B3 Tubarão V11 Auto+Manual", layout="wide")
+st.title("🦈 TERMINAL B3 V11 - AUTO 09:30/15h + MANUAL")
 
-# ========= RELÓGIO AUTOMÁTICO (atualiza a cada 60s) =========
-st_autorefresh(interval=60*1000, key="relogio_b3")
+# ====== RELÓGIO - ATUALIZA A CADA 60 SEGUNDOS ======
+st_autorefresh(interval=60*1000, key="relogio_v11")
+agora = datetime.now(FUSO_BR)
+hora_atual = agora.strftime("%H:%M")
+data_atual = agora.strftime("%d/%m/%Y")
+dia_semana = agora.weekday()  # 0=segunda, 6=domingo
 
-agora_br = datetime.now(FUSO_BR)
-hora_str = agora_br.strftime("%H:%M")
-data_str = agora_br.strftime("%d/%m/%Y")
-
-st.sidebar.metric("⏰ Hora Brasília", hora_str)
-st.sidebar.write(f"📅 {data_str} - {agora_br.strftime('%A')}")
-st.sidebar.divider()
-
-# Horários que você pediu
-HORARIOS_ALERTA = ["09:30", "15:00"]
-# MODO TESTE: se quiser testar agora, descomente a linha abaixo:
-# HORARIOS_ALERTA.append(hora_str)
-
-st.sidebar.write("**Alertas programados:**")
-for h in HORARIOS_ALERTA:
-    st.sidebar.write(f"🔔 {h} BRT")
+# Sidebar
+st.sidebar.metric("⏰ Brasília Agora", hora_atual)
+st.sidebar.write(f"📅 {data_atual}")
+st.sidebar.info(f"🔔 Autos: {', '.join(HORARIOS_AUTO)} BRT")
+st.sidebar.write("Deixe essa aba aberta das 9h às 15h30")
 
 TOP25 = ["PETR4.SA","VALE3.SA","ITUB4.SA","BBDC4.SA","BBAS3.SA","B3SA3.SA","ABEV3.SA","BPAC11.SA","PRIO3.SA","ITSA4.SA","WEGE3.SA","MGLU3.SA","JBSS3.SA","LREN3.SA","GGBR4.SA","USIM5.SA","RENT3.SA","RAIL3.SA","ELET3.SA","SBSP3.SA","BBSE3.SA","CYRE3.SA","HAPV3.SA","RADL3.SA","SUZB3.SA"]
 
@@ -61,73 +56,91 @@ def analisa(ticker):
         return {"ativo":ticker.replace(".SA",""), "preco":float(u['Close']), "rsi":float(u['RSI']), "score":score, "tubarao":tubarao, "vol_mult":float(vol_mult)}
     except: return None
 
-def fazer_scan_e_mandar(motivo="MANUAL"):
+# FUNÇÃO ÚNICA QUE FAZ TUDO - MANUAL E AUTO USAM A MESMA
+def executa_scan(motivo):
+    st.subheader(f"📊 Scan {motivo} - {hora_atual} BRT")
     lista=[]
-    prog=st.progress(0, text="Varrendo B3...")
+    barra = st.progress(0, text="Varrendo B3...")
     for i,t in enumerate(TOP25):
-        a=analisa(t)
-        if not a:
-            prog.progress((i+1)/len(TOP25))
-            continue
-        preco=a['preco']; score=a['score']; base=a['ativo']
-        # Código opção exemplo Outubro (J) CALL 3% OTM
-        strike_call = round(preco*1.03,2)
-        strike_put = round(preco*0.97,2)
-        cod_call = f"{base}J{int(strike_call)}" if strike_call<100 else f"{base}J{int(strike_call*10)/10}"
-        cod_put = f"{base}V{int(strike_put)}" if strike_put<100 else f"{base}V{int(strike_put*10)/10}"
+        a = analisa(t)
+        if a:
+            preco=a['preco']; score=a['score']; base=a['ativo']
+            strike_c = round(preco*1.03,2)
+            strike_p = round(preco*0.97,2)
+            # Código legível
+            cod_c = f"{base}J{int(strike_c)}"
+            cod_p = f"{base}V{int(strike_p)}"
+            qtd = int(RISCO_REAIS // 50) # se opção R$0,50 = 4 contratos
+            if score >= 3:
+                lista.append({"Ativo":base, "Preço":f"R${preco:.2f}", "Sinal":"🟢 CALL", "Score":score, "Tubarão":f"🐋 {a['vol_mult']:.1f}x" if a['tubarao'] else "-", "OPÇÃO":cod_c, "Strike":f"R${strike_c}", "Lote R$200":f"{qtd} cont", "RSI":f"{a['rsi']:.0f}", "Tipo":"CALL"})
+            elif score <= -2:
+                lista.append({"Ativo":base, "Preço":f"R${preco:.2f}", "Sinal":"🔴 PUT", "Score":score, "Tubarão":f"🐋 {a['vol_mult']:.1f}x" if a['tubarao'] else "-", "OPÇÃO":cod_p, "Strike":f"R${strike_p}", "Lote R$200":f"{qtd} cont", "RSI":f"{a['rsi']:.0f}", "Tipo":"PUT"})
+        barra.progress((i+1)/len(TOP25))
+    barra.empty()
 
-        if score >= 3:
-            qtd = int((BANCA*RISCO)//50) # ex R$0,50 = 4 cont
-            lista.append({"Ativo":base, "Preço":f"R${preco:.2f}", "Sinal":"🟢 CALL", "Score":score, "Tubarão":f"🐋 {a['vol_mult']:.1f}x" if a['tubarao'] else "-", "OPÇÃO":cod_call, "Strike":f"R${strike_call}", "Lote R$200":f"{qtd} cont", "RSI":f"{a['rsi']:.0f}", "Tipo":"CALL"})
-        elif score <= -2:
-            qtd = int((BANCA*RISCO)//50)
-            lista.append({"Ativo":base, "Preço":f"R${preco:.2f}", "Sinal":"🔴 PUT", "Score":score, "Tubarão":f"🐋 {a['vol_mult']:.1f}x" if a['tubarao'] else "-", "OPÇÃO":cod_put, "Strike":f"R${strike_put}", "Lote R$200":f"{qtd} cont", "RSI":f"{a['rsi']:.0f}", "Tipo":"PUT"})
-        prog.progress((i+1)/len(TOP25))
-    prog.empty()
-
-    df = pd.DataFrame(lista)
-    if df.empty:
-        msg = f"⚪ *B3 AUTO {hora_str} BRT {data_str}* - Sem sinal. Preservar R${BANCA:.0f} é lucro. [{motivo}]"
-        st.warning("Sem sinal hoje. Melhor preservar banca.")
+    if not lista:
+        df = pd.DataFrame()
+        msg = f"⚪ *B3 {motivo} {hora_atual} BRT {data_atual}* - Sem sinal. Preservar R${BANCA:.0f}."
+        st.warning("Sem sinal hoje. Preservar capital é o trade.")
     else:
-        df = df.sort_values("Score", ascending=False)
+        df = pd.DataFrame(lista).sort_values("Score", ascending=False)
         st.dataframe(df, use_container_width=True, hide_index=True)
-        msg = f"🦈 *B3 ALERTA AUTO {hora_str} BRT - {data_str}* [{motivo}]\nBanca R${BANCA:.0f} - Risco R${BANCA*RISCO:.0f}\n\n"
+        tubaroes = df[df['Tubarão'].str.contains("🐋")]
+        if not tubaroes.empty:
+            st.success(f"🦈 {len(tubaroes)} tubarões detectados!")
+        msg = f"🦈 *B3 {motivo} {hora_atual} BRT {data_atual}*\nBanca R${BANCA:.0f} Risco R${RISCO_REAIS:.0f}\n\n"
         for _, r in df.iterrows():
             msg += f"{r['Sinal']} {r['Ativo']} {r['OPÇÃO']} {r['Tubarão']} Score {r['Score']}\n"
         msg += "\nAlvo +100% parcial. Stop -50%."
 
     st.code(msg)
+    # ENVIA WHATSAPP
     try:
         url = f"https://api.callmebot.com/whatsapp.php?phone={MEU_NUMERO}&text={quote(msg)}&apikey={MINHA_APIKEY}"
-        r = requests.get(url, timeout=15)
-        if "queued" in r.text.lower() or "sent" in r.text.lower():
-            st.success(f"✅ WhatsApp enviado {hora_str} BRT! {r.text}")
-            st.session_state["ultimo_disparo"] = f"{data_str} {hora_str}"
+        resp = requests.get(url, timeout=15)
+        if "queued" in resp.text.lower() or "sent" in resp.text.lower():
+            st.success(f"✅ WhatsApp {motivo} enviado! {hora_atual}")
+            st.toast(f"WhatsApp {motivo} enviado!", icon="✅")
             return True
         else:
-            st.error(f"Erro CallMeBot: {r.text}")
+            st.error(f"Erro CallMeBot: {resp.text}")
     except Exception as e:
         st.error(f"Erro envio: {e}")
     return False
 
-# ========= BOTÃO MANUAL =========
-if st.button("🚀 SCAN MANUAL AGORA", type="primary"):
-    fazer_scan_e_mandar("MANUAL")
+# ====== ÁREA MANUAL - SEMPRE FUNCIONA ======
+col1, col2 = st.columns(2)
+with col1:
+    if st.button("🚀 GERAR DADOS MANUAL AGORA", type="primary", use_container_width=True):
+        executa_scan("MANUAL")
+
+with col2:
+    if st.button("🧪 TESTAR WHATSAPP", use_container_width=True):
+        requests.get(f"https://api.callmebot.com/whatsapp.php?phone={MEU_NUMERO}&text={quote(f'Teste B3 V11 {hora_atual} BRT OK')}&apikey={MINHA_APIKEY}")
+        st.success("Teste enviado!")
 
 st.divider()
 
-# ========= LÓGICA AUTOMÁTICA 9:30 e 15h =========
-if hora_str in HORARIOS_ALERTA and agora_br.weekday() < 5: # seg a sex
-    chave_hoje = f"{data_str} {hora_str}"
-    if "ultimo_disparo" not in st.session_state or st.session_state.ultimo_disparo!= chave_hoje:
-        st.toast(f"Disparo automático {hora_str} BRT!", icon="🦈")
-        fazer_scan_e_mandar(f"AUTO {hora_str}")
+# ====== ÁREA AUTOMÁTICA - NÃO PRECISA CLICAR ======
+# Só dispara se for dia de semana e hora bater
+if dia_semana < 5: # 0-4 = seg a sex
+    if hora_atual in HORARIOS_AUTO:
+        chave = f"{data_atual} {hora_atual}"
+        ultimo = st.session_state.get("ultimo_auto", "")
+        if ultimo != chave:
+            st.warning(f"⏰ HORÁRIO AUTO DETECTADO {hora_atual} BRT - Disparando...")
+            ok = executa_scan(f"AUTO {hora_atual}")
+            if ok:
+                st.session_state["ultimo_auto"] = chave
+                st.balloons()
+        else:
+            st.info(f"✅ Auto {hora_atual} de hoje já enviado em {ultimo}")
     else:
-        st.info(f"✅ Alerta {hora_str} de hoje já enviado às {st.session_state.ultimo_disparo}")
+        # Mostra contagem regressiva
+        proximos = [h for h in HORARIOS_AUTO if h > hora_atual]
+        if proximos:
+            st.info(f"⏳ Próximo auto hoje às {proximos[0]} BRT. App atualiza sozinho a cada 1 min. Pode clicar no MANUAL quando quiser.")
+        else:
+            st.info(f"✅ Autos de hoje encerrados. Amanhã às {HORARIOS_AUTO[0]} BRT.")
 else:
-    proximo = [h for h in HORARIOS_ALERTA if h > hora_str]
-    if proximo:
-        st.info(f"⏳ Próximo alerta automático hoje às {proximo[0]} BRT. App se atualiza a cada 1 min.")
-    else:
-        st.info(f"⏳ Alertas de hoje encerrados. Próximo amanhã às {HORARIOS_ALERTA[0]} BRT.")
+    st.info("📴 Fim de semana - sem alertas auto.")
