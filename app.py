@@ -113,4 +113,4 @@ if st.button("🦈 ESCANEAR TUBARÕES + OPÇÕES", type="primary"):
     else:
         st.info("Sem oportunidade com tubarão + sinal hoje. Isso é bom - te protege de perder R$200.")
 
-st.caption("Como os grandes invest
+st.caption("Como os grandes invest")
