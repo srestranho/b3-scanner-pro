@@ -8,8 +8,8 @@ import random
 
 st.set_page_config(page_title="Radar V13.1 Tubarao PRO", page_icon="🦈", layout="wide")
 
-TELEGRAM_TOKEN = st.secrets.get("TELEGRAM_TOKEN", "")
-TELEGRAM_CHAT_ID = st.secrets.get("TELEGRAM_CHAT_ID", "")
+TELEGRAM_TOKEN = st.secrets.get("8305502017:AAHue7nQgoQr33vO0PFGVCFyL2qP8Ni1ew0", "")
+TELEGRAM_CHAT_ID = st.secrets.get("1071698683", "")
 
 def enviar_telegram(msg):
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
