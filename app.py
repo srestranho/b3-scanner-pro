@@ -8,7 +8,7 @@ import random
 
 st.set_page_config(page_title="V13.2 Opcoes.net REAL", page_icon="🦈", layout="wide")
 
-TELEGRAM_TOKEN = st.secrets.get("8305502017:AAHue7nQgoQr33vO0PFGVCFyL2qP8Ni1ew0")
+TELEGRAM_TOKEN = st.secrets.get("8305502017:AAHue7nQgoQr33vO0PFGVCFyL2qP8Ni1ew0"),
 TELEGRAM_CHAT_ID = st.secrets.get("1071698683")
 
 def enviar_telegram_debug(msg):
