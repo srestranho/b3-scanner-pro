@@ -4,6 +4,3 @@ numpy
 pytz
 streamlit-autorefresh
 requests
-yfinance
-beautifulsoup4
-lxml
