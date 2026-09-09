@@ -264,4 +264,7 @@ with tab4:
 st.sidebar.header("⏰ Agendamento")
 st.sidebar.write("09:30 e 15:00 AUTO")
 st.sidebar.divider()
-if st.sidebar.button("🧪 TESTAR OPÇÕES.NET
+if st.sidebar.button("🧪 TESTAR OPÇÕES.NET AGORA"):
+    teste = buscar_opcoes_reais_opcoesnet("PETR4")
+    st.sidebar.write(f"PETR4: {len(teste)} opções encontradas")
+    st.sidebar.write(teste[:3])
