@@ -4,3 +4,5 @@ numpy
 pytz
 streamlit-autorefresh
 requests
+beautifulsoup4
+lxml
